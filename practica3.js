@@ -4,7 +4,7 @@ window.addEventListener("load",function() {
 	Q.controls();
 	Q.touch();
 
-	var gameEnded = false;
+	var gameOver = false;
 	
 	Q.animations("mario", {
 		stand_right: {frames: [0], rate: 1/5},
@@ -14,7 +14,7 @@ window.addEventListener("load",function() {
 		jump_right: {frames: [4], rate: 1/5},
 		jump_left: {frames: [18], rate: 1/5},
 		die_right: {frames: [12], loop: false, rate: 5, trigger: "died"},
-		die_left: {frames: [26], loop:false, rate: 5, trigger: "died"}
+		die_left: {frames: [26], loop: false, rate: 5, trigger: "died"}
 	});
 
 	Q.animations("goomba_s", {
@@ -29,6 +29,10 @@ window.addEventListener("load",function() {
 		kill: {frames: [2], loop: false, rate: 1/2, trigger: "killed"}
 	});
 
+	Q.animations("coin_s", {
+		glow: {frames: [0,1,2], rate: 1/6}
+	});
+
 	Q.Sprite.extend("Mario", {
 		init: function(p){
 
@@ -39,7 +43,12 @@ window.addEventListener("load",function() {
 
 			this.on("hit.sprite",function(collision) {
       			if(collision.obj.isA("Princess")) {
-        			Q.stageScene("endGame",1, { label: "You Won!" }); 
+        			Q.stageScene("endGame",1, { label: "You Won!" });
+        			this.destroy();
+        			collision.obj.destroy();
+      			} else if(collision.obj.isA("Coin")) {
+        			collision.obj.animate({y: collision.obj.p.y-20}, 0.1, Q.Easing.Quadratic.Out, {callback: function(){this.destroy();}});
+      				Q.state.inc("score",1);
       			}
     		});
 
@@ -48,13 +57,13 @@ window.addEventListener("load",function() {
 
 		dying: function(){
 			this.del('2d, platformerControls');
-			this.play("die_"+this.p.dir,1);
-			gameEnded = true;
+			this.play("die_" + this.p.dir, 1);
+			gameOver = true;
 			this.p.vy = -5;
 		},
 
 		step: function(dt){
-			if(gameEnded){
+			if(gameOver){
 				this.p.time+=dt;
 				if(this.p.time >= 0.5){
 					this.p.vy += 9.4*dt;
@@ -114,7 +123,7 @@ window.addEventListener("load",function() {
   		},
 
   		step:function(dt){
-  			if(!gameEnded) this.play("move");
+  			if(!gameOver) this.play("move");
   			else{
   				this.del('2d');
   				this.play("stand");
@@ -146,7 +155,7 @@ window.addEventListener("load",function() {
 	    	this.on("killed", this, "destroy");
 
 	    	this.on("step", function(dt) {
-	    		if(!gameEnded){
+	    		if(!gameOver){
 	    			this.play("release");
 
 	    			if (this.p.vy>=150){
@@ -161,6 +170,18 @@ window.addEventListener("load",function() {
   		}
 	});
 
+	Q.Sprite.extend("Coin",{
+		init: function(p){
+			this._super(p, { sprite: 'coin_s', sheet: 'coin',
+				vy: -7, catched: false, time: 0});
+    		this.add('animation, tween');
+		},
+
+		step: function(dt){
+			this.play("glow");
+		}
+	});
+
 	Q.Sprite.extend("Princess", {
 	 	init: function(p) {
 	    	this._super(p, { sheet: 'princess' });
@@ -171,6 +192,32 @@ window.addEventListener("load",function() {
 	 	init: function(p) {
 	    	this._super(p, { sheet: 'mainTitle' });
 	  	}
+	});
+
+	Q.UI.Text.extend("Score",{
+		init: function(p){
+			this._super({
+				label: "Score: 0",
+				x: 20,
+				y: 0
+			});
+
+			Q.state.on("change.score", this, "score");
+		},
+
+		score: function(score){
+			this.p.label = "Score: " + score;
+		}
+	});
+
+	Q.scene('hud',function(stage){
+		var box = stage.insert(new Q.UI.Container({
+	    	x: 60, y: 25, fill: "rgba(0,0,0,0)"
+	  	}));
+
+	  	var label = box.insert(new Q.Score());
+
+	  	box.fit(10);
 	});
 
 	Q.scene('endGame',function(stage) {
@@ -184,7 +231,7 @@ window.addEventListener("load",function() {
 	                                        label: stage.options.label }));
 	  	button.on("click",function() {
 	    	Q.clearStages();
-	    	gameEnded = false;
+	    	gameOver = false;
 	    	Q.stageScene('startGame');
 	  	});
 	  	box.fit(20);
@@ -201,12 +248,17 @@ window.addEventListener("load",function() {
 		var button = box.insert(new Q.UI.Button({ x: 0, y: 0, h:480, w:320, fill: "rgba(0,0,0,0)"}));         
 	  	button.on("click",function() {
 	    	Q.clearStages();
+	    	Q.state.reset({score: 0, lives: 2});
 	    	Q.stageScene('level1');
+	    	Q.stageScene('hud',1);
 	  	});
+
 	  	button.on("step",function() {
 	    	if(Q.inputs['fire']){
 		    	Q.clearStages();
+		    	Q.state.reset({score: 0, lives: 2});
 		    	Q.stageScene('level1');
+		    	Q.stageScene('hud',1);
 		    }
 	  	});
 	  	box.fit(1000);
@@ -214,12 +266,20 @@ window.addEventListener("load",function() {
 
 	Q.scene("level1", function(stage){
 		Q.stageTMX("level.tmx",stage);
+
+		stage.insert(new Q.Coin({x: 400, y: 500}));
+		stage.insert(new Q.Coin({x: 430, y: 500}));
+		stage.insert(new Q.Coin({x: 460, y: 500}));
+		stage.insert(new Q.Coin({x: 1400, y: 420}));
+		stage.insert(new Q.Coin({x: 1430, y: 420}));
+		stage.insert(new Q.Coin({x: 1600, y: 420}));
 		
 		stage.insert(new Q.Bloopa({x: 300, y: 420}));
 
 		stage.insert(new Q.Goomba({x: 500, y: 420}));
 		stage.insert(new Q.Goomba({x: 1550, y: 420}));
 		stage.insert(new Q.Goomba({x: 1500, y: 420}));
+
 		stage.insert(new Q.Princess({x: 1900, y: 452}));
 
 		var player = stage.insert(new Q.Mario());
@@ -227,13 +287,15 @@ window.addEventListener("load",function() {
 		stage.centerOn(160,370);
 	});
 
-	Q.load("mario_small.png, mario_small.json, goomba.png, goomba.json, bloopa.png, bloopa.json, princess.png, mainTitle.png", function() {
+	Q.load("mario_small.png, mario_small.json, goomba.png, goomba.json, bloopa.png, bloopa.json, princess.png, mainTitle.png, coin.png, coin.json", function() {
 	 	Q.sheet("mainTitle","mainTitle.png", { tilew: 320, tileh: 480 });
 	 	Q.sheet("mario_small","mario_small.png", { tilew: 32, tileh: 32 });
-	 	Q.sheet("goomba","goomba.png", { tilew: 32, tileh: 32 });
-	 	Q.sheet("bloopa","bloopa.png", { tilew: 32, tileh: 32 });
+	 	Q.sheet("goomba","goomba.png", { tilew: 28, tileh: 28 });
+	 	Q.sheet("bloopa","bloopa.png", { tilew: 28, tileh: 32 });
 	 	Q.sheet("princess","princess.png", { tilew: 30, tileh: 48 });
+		Q.sheet("coin","coin.png", { tilew: 34, tileh: 34 });
 		Q.compileSheets("mario_small.png","mario_small.json");
+		Q.compileSheets("coin.png","coin.json");
 		Q.compileSheets("goomba.png","goomba.json");
 		Q.compileSheets("bloopa.png","bloopa.json");
 		Q.stageScene("startGame",2);
