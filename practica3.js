@@ -33,6 +33,23 @@ window.addEventListener("load",function() {
 		glow: {frames: [0,1,2], rate: 1/6}
 	});
 
+	Q.component("bumped",{
+		added: function(){
+			this.entity.on("bump.top", this, "bump.top");
+			this.entity.on("bump.left", this, "bump.left");
+			this.entity.on("bump.right", this, "bump.right");
+			this.entity.on("bump.bottom", this, "bump.bottom");
+	    		left: right: bottom,function(collision) {
+	    		if(collision.obj.isA("Mario")) { 
+	        		Q.stageScene("endGame",1, { label: "You Died" }); 
+	        		collision.obj.dying();
+	      		}
+	    	});
+
+	    	this.extend.on("killed", this, "destroy");
+	    }
+	});
+
 	Q.Sprite.extend("Mario", {
 		init: function(p){
 
@@ -103,23 +120,6 @@ window.addEventListener("load",function() {
 			this._super(p, { sprite: 'goomba_s', sheet: 'goomba',
 				vx: 90});
     		this.add('2d, aiBounce, animation');
-    
-    		this.on("bump.top",function(collision) {
-	      		if(collision.obj.isA("Mario")) { 
-	      			this.play("kill",1);
-	      			this.p.vx = 0;
-	        		collision.obj.p.vy = -300;
-	      		}
-	    	});
-
-	    	this.on("bump.left,bump.right,bump.bottom",function(collision) {
-	    		if(collision.obj.isA("Mario")) { 
-	        		Q.stageScene("endGame",1, { label: "You Died" }); 
-	        		collision.obj.dying();
-	      		}
-	    	});
-
-	    	this.on("killed", this, "destroy");
   		},
 
   		step:function(dt){
@@ -136,23 +136,6 @@ window.addEventListener("load",function() {
 			this._super(p, { sprite: 'bloopa_s', sheet: 'bloopa',
 				vy: -300, killed: false, time: 0});
     		this.add('2d, animation');
-    
-    		this.on("bump.top",function(collision) {
-	      		if(collision.obj.isA("Mario")) { 
-	        		this.play("kill");
-	        		this.p.vy = 100;
-	        		collision.obj.p.vy = -300;
-	      		}
-	    	});
-
-	    	this.on("bump.left,bump.right,bump.bottom",function(collision) {
-	    		if(collision.obj.isA("Mario")) { 
-	        		Q.stageScene("endGame",1, { label: "You Died" }); 
-	        		collision.obj.dying();
-	      		}
-	    	});
-
-	    	this.on("killed", this, "destroy");
 
 	    	this.on("step", function(dt) {
 	    		if(!gameOver){
