@@ -282,7 +282,7 @@ window.addEventListener("load",function() {
 		stage.add("viewport").follow(player,{x:true, y:false});
 		stage.centerOn(160,370);
 
-		Q.audio.play("music_main.mp3");
+		Q.audio.play("music_main.mp3", {loop: true});
 	});
 
 	Q.load("coin.mp3, music_level_complete.mp3,music_main.mp3, music_die.mp3, mario_small.png, mario_small.json, goomba.png, goomba.json, bloopa.png, bloopa.json, princess.png, mainTitle.png, coin.png, coin.json", function() {
