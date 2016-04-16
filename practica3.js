@@ -18,6 +18,17 @@ window.addEventListener("load",function() {
 		die_left: {frames: [26], loop: false, rate: 6, trigger: "died"}
 	});
 
+	Q.animations("marioBig", {
+		stand_right: {frames: [0], rate: 1/5},
+		stand_left: {frames: [41], rate: 1/5},
+		run_right: {frames: [1,2,3], rate: 1/5},
+		run_left: {frames: [38,39,40], rate: 1/5},
+		jump_right: {frames: [5], rate: 1/5},
+		jump_left: {frames: [36], rate: 1/5},
+		hit_right: {frames: [15, 0, 15], loop: false, rate: 2, trigger: "hitt"},
+		hit_left: {frames: [26, 41, 26], loop: false, rate: 2, trigger: "hitt"}
+	});
+
 	Q.animations("goomba_s", {
 		stand: {frames: [0], rate: 1/3},
 		move: {frames: [0,1], rate: 1/3},
@@ -45,7 +56,7 @@ window.addEventListener("load",function() {
 
 			this._super(p, {sprite: "mario",sheet: "mario_small", 
 				x: 150,y: 380, dir: "right", time: 0,
-				vy_aux: 0, inAir: false});
+				vy_aux: 0, go_small: false, inAir: false});
 			this.add('2d, platformerControls, animation');
 
 			this.on("hit.sprite",function(collision) {
@@ -63,6 +74,13 @@ window.addEventListener("load",function() {
     		});
 
     		this.on("died", this, "restart");
+    		this.on("hitt", this, "toSmall");
+		},
+
+		toSmall: function(){
+			this.del('2d, platformerControls');
+			this.play("hit_"+ this.p.dir, 1);
+			go_small = true;
 		},
 
 		restart: function(){
@@ -82,7 +100,10 @@ window.addEventListener("load",function() {
 		},
 
 		step: function(dt){
-			if(gameOver){
+			if(go_small){
+				this.p.time+=dt;
+					this.p.sheet: "mario_small";
+			}else if(gameOver){
 				this.p.time+=dt;
 				if(this.p.time >= 0.5){
 					this.p.vy += 9.4*dt;
@@ -359,13 +380,15 @@ window.addEventListener("load",function() {
 		Q.audio.play("music_main.mp3", {loop: true});
 	});
 
-	Q.load("coin.mp3, music_level_complete.mp3,music_main.mp3, music_die.mp3, mario_small.png, mario_small.json, goomba.png, goomba.json, bloopa.png, bloopa.json, princess.png, mainTitle.png, coin.png, coin.json", function() {
+	Q.load("coin.mp3, music_level_complete.mp3,music_main.mp3, music_die.mp3, mario_small.png, mario_small.json,goomba.png, goomba.json, bloopa.png, bloopa.json,princess.png, mainTitle.png, coin.png, coin.json,mario_big.png", function() {
+		Q.sheet("mario_big","mario_big.png",{tilew:32, tileh:64});
 	 	Q.sheet("mainTitle","mainTitle.png", { tilew: 320, tileh: 480 });
 	 	Q.sheet("mario_small","mario_small.png", { tilew: 32, tileh: 32 });
 	 	Q.sheet("goomba","goomba.png", { tilew: 28, tileh: 28 });
 	 	Q.sheet("bloopa","bloopa.png", { tilew: 28, tileh: 32 });
 	 	Q.sheet("princess","princess.png", { tilew: 30, tileh: 48 });
 		Q.sheet("coin","coin.png", { tilew: 34, tileh: 34 });
+		//Q.compileSheets("mario_big.png","mario_big.json");
 		Q.compileSheets("mario_small.png","mario_small.json");
 		Q.compileSheets("coin.png","coin.json");
 		Q.compileSheets("goomba.png","goomba.json");
